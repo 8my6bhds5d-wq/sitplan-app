@@ -1,5 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
-import { LEADS_INICIAIS, STATUS_CONFIG as STATUS_CONFIG_DATA, FUNIL_ORDER as FUNIL_ORDER_DATA } from "./data";
+import { useState, useMemo, useRef } from "react";
 
 // ── EXPORT / IMPORT ────────────────────────────────────────────────────────
 function exportarCSV(leads) {
@@ -44,11 +43,32 @@ const C = {
   danger:'#8B1A1A', dangerBg:'#FFF0F0', warn:'#7C6200', warnBg:'#FFF8E6',
 };
 
-const STATUS_CONFIG = STATUS_CONFIG_DATA;
+const STATUS_CONFIG = {
+  novo:         { label:'Novo',          emoji:'🔵', color:'#1E3A5F', bg:'#EFF4FF', border:'#C5D8F0' },
+  tentativa:    { label:'Tentativa',     emoji:'📞', color:'#7C6200', bg:'#FFF8E6', border:'#F0D980' },
+  agendado:     { label:'Agendado',      emoji:'📅', color:'#0D5C3A', bg:'#EDFAF4', border:'#A8DFC5' },
+  apresentado:  { label:'Apresentado',   emoji:'✅', color:'#3D2B8E', bg:'#F3F0FF', border:'#C4B5FD' },
+  fechamento:   { label:'Fechamento',    emoji:'🤝', color:'#5B1FAD', bg:'#F5F0FF', border:'#D4B8FF' },
+  semInteresse: { label:'Sem Interesse', emoji:'❌', color:'#8B1A1A', bg:'#FFF0F0', border:'#FFBABA' },
+  pausado:      { label:'Pausado',       emoji:'⏸️', color:'#5C5C5C', bg:'#F5F5F5', border:'#DCDCDC' },
+  cliente:      { label:'Cliente',       emoji:'⭐', color:'#7C4A00', bg:'#FFF8ED', border:'#F0C878' },
+  retornar:     { label:'Retornar',      emoji:'🔄', color:'#1A5C7C', bg:'#EDF8FF', border:'#A8D8F0' },
+};
 
-const FUNIL_ORDER = FUNIL_ORDER_DATA;
+const FUNIL_ORDER = ['novo','tentativa','agendado','apresentado','fechamento','cliente','retornar','pausado','semInteresse'];
 
-
+const LEADS_INICIAIS = [
+  { id:1, nome:'Mineiro Junior', indicadoPor:'Tarcisio', segmento:'Depósito de Bebidas', telefone:'24999990001', status:'agendado', proximoPasso:'Reunião amanhã 10h', historico:[], dataContato:'2025-05-10', potencial:5, temSeguro:'Não', seguradora:'' },
+  { id:2, nome:'Gilberto', indicadoPor:'Eder', segmento:'Mecânico', telefone:'24999990002', status:'tentativa', proximoPasso:'Ligar às 14h', historico:[], dataContato:'2025-05-08', potencial:3, temSeguro:'Sim', seguradora:'Porto Seguro' },
+  { id:3, nome:'Mauro', indicadoPor:'Mineiro Junior', segmento:'Depósito de Bebidas', telefone:'24999990003', status:'apresentado', proximoPasso:'Aguardando resposta', historico:[], dataContato:'2025-05-09', potencial:4, temSeguro:'Não', seguradora:'' },
+  { id:4, nome:'Natan', indicadoPor:'Mineiro Junior', segmento:'Barbeiro', telefone:'24999990004', status:'novo', proximoPasso:'', historico:[], dataContato:'', potencial:2, temSeguro:'Não sei', seguradora:'' },
+  { id:5, nome:'Fernando', indicadoPor:'Jeferson', segmento:'Mecânico', telefone:'24999990005', status:'pausado', proximoPasso:'Aguardando cirurgia', historico:[], dataContato:'2025-04-28', potencial:3, temSeguro:'Não', seguradora:'' },
+  { id:6, nome:'Ariane', indicadoPor:'Mineiro Junior', segmento:'Representante Coca', telefone:'24999990006', status:'fechamento', proximoPasso:'Proposta enviada', historico:[], dataContato:'2025-05-12', potencial:5, temSeguro:'Sim', seguradora:'SulAmérica' },
+  { id:7, nome:'Junior', indicadoPor:'Mineiro Junior', segmento:'Oficina', telefone:'24999990007', status:'cliente', proximoPasso:'', historico:[], dataContato:'2025-04-30', potencial:4, temSeguro:'Sim', seguradora:'Sitplan' },
+  { id:8, nome:'Elton', indicadoPor:'Mineiro Junior', segmento:'Guincho', telefone:'24999990008', status:'semInteresse', proximoPasso:'', historico:[], dataContato:'2025-05-06', potencial:1, temSeguro:'Não', seguradora:'' },
+  { id:9, nome:'Robson', indicadoPor:'Eder', segmento:'Mecânico', telefone:'24999990009', status:'agendado', proximoPasso:'Reunião sexta 16h', historico:[], dataContato:'2025-05-11', potencial:4, temSeguro:'Não', seguradora:'' },
+  { id:10, nome:'Danilo', indicadoPor:'Tarcisio', segmento:'Mecânico', telefone:'24999990010', status:'tentativa', proximoPasso:'Tentar de tarde', historico:[], dataContato:'2025-05-07', potencial:3, temSeguro:'Não sei', seguradora:'' },
+];
 
 const DIAS_ALERTA = 5;
 const META_SEMANAL_AGENDAMENTOS = 10;
@@ -158,7 +178,7 @@ function Sidebar({ tela, setTela, leads }) {
 }
 
 // ── DASHBOARD ──────────────────────────────────────────────────────────────
-function Hoje({ leads, setTela, setLeadSel }) {
+function Hoje({ leads, setTela, setLeadSel, isPad=true }) {
   const contadores = Object.fromEntries(Object.keys(STATUS_CONFIG).map(k=>[k,leads.filter(l=>l.status===k).length]));
   const pendentes = leads.filter(l=>['agendado','tentativa','fechamento'].includes(l.status));
   const alertas = leads.filter(l => !['cliente','semInteresse'].includes(l.status) && diasSemContato(l.dataContato) >= DIAS_ALERTA);
@@ -190,7 +210,7 @@ function Hoje({ leads, setTela, setLeadSel }) {
         )}
 
         {/* KPIs */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
+        <div style={{ display:'grid', gridTemplateColumns: isPad ? 'repeat(4,1fr)' : 'repeat(2,1fr)', gap:12, marginBottom:20 }}>
           {[
             { label:'Total Leads', val:leads.length, icon:'👥', color:C.navyMid },
             { label:'Agendados', val:contadores.agendado||0, icon:'📅', color:'#0D5C3A' },
@@ -227,7 +247,7 @@ function Hoje({ leads, setTela, setLeadSel }) {
           })}
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <div style={{ display:'grid', gridTemplateColumns: isPad ? '1fr 1fr' : '1fr', gap:20 }}>
           {/* Pendentes */}
           <div>
             <SectionTitle>Ações Pendentes</SectionTitle>
@@ -281,9 +301,51 @@ function Hoje({ leads, setTela, setLeadSel }) {
 }
 
 // ── ALERTAS ────────────────────────────────────────────────────────────────
-function Alertas({ leads, setTela, setLeadSel }) {
-  const alertas = leads.filter(l => !['cliente','semInteresse'].includes(l.status) && diasSemContato(l.dataContato) >= DIAS_ALERTA)
+function Alertas({ leads, setTela, setLeadSel, setLeads }) {
+  const ativos = leads.filter(l => !['cliente','semInteresse','semContato'].includes(l.status));
+  
+  // Group 1: never contacted (no dataContato)
+  const nuncaContatados = ativos.filter(l => !l.dataContato || l.dataContato === '')
+    .sort((a,b) => a.nome.localeCompare(b.nome));
+  
+  // Group 2: had contact but stale 5+ days
+  const parados = ativos.filter(l => l.dataContato && l.dataContato !== '' && diasSemContato(l.dataContato) >= DIAS_ALERTA)
     .sort((a,b) => diasSemContato(b.dataContato) - diasSemContato(a.dataContato));
+
+  const total = nuncaContatados.length + parados.length;
+
+  function marcarTodosContatados(grupo) {
+    const hoje = new Date().toISOString().split('T')[0];
+    const ids = new Set(grupo.map(l => l.id));
+    setLeads(prev => prev.map(l => ids.has(l.id) ? { ...l, dataContato: hoje } : l));
+  }
+
+  function LeadAlerta({ lead, urgente }) {
+    const dias = diasSemContato(lead.dataContato);
+    return (
+      <div style={{ background:C.white, borderRadius:12, padding:'13px 16px', marginBottom:8, border:`1.5px solid ${urgente?'#FFBABA':'#F0D980'}`, display:'flex', alignItems:'center', gap:12 }}>
+        <div onClick={()=>{setLeadSel(lead);setTela('detalhe');}} style={{ display:'flex', alignItems:'center', gap:12, flex:1, cursor:'pointer', minWidth:0 }}>
+          <div style={{ width:38, height:38, borderRadius:10, background:urgente?'#FFF0F0':'#FFF8E6', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
+            {urgente?'🔴':'🟡'}
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontWeight:700, fontSize:13, color:C.text }}>{lead.nome}</div>
+            <div style={{ fontSize:11, color:C.textLight }}>via {lead.indicadoPor||'--'}{lead.segmento?` · ${lead.segmento}`:''}</div>
+            <div style={{ fontSize:11, fontWeight:700, color:urgente?'#8B1A1A':'#7C6200', marginTop:2 }}>
+              ⏰ {!lead.dataContato || lead.dataContato==='' ? 'Nunca contactado' : `${dias} dias sem contato`}
+            </div>
+          </div>
+          <Badge status={lead.status} />
+        </div>
+        <button onClick={() => {
+          const hoje = new Date().toISOString().split('T')[0];
+          setLeads(prev => prev.map(l => l.id===lead.id ? {...l, dataContato:hoje} : l));
+        }} style={{ background:C.success, color:C.white, border:'none', borderRadius:8, padding:'6px 10px', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+          ✓ Contatei
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ flex:1, background:C.silverBg, overflow:'auto' }}>
@@ -293,43 +355,45 @@ function Alertas({ leads, setTela, setLeadSel }) {
           <span style={{ color:C.silverLight, fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:1 }}>Follow-up</span>
         </div>
         <div style={{ color:C.white, fontSize:24, fontWeight:800 }}>Alertas</div>
-        <div style={{ color:C.silverLight, fontSize:13, marginTop:2 }}>{alertas.length} leads precisam de atenção</div>
+        <div style={{ color:C.silverLight, fontSize:13, marginTop:2 }}>{total} leads precisam de atenção</div>
       </div>
 
       <div style={{ padding:'20px 24px' }}>
-        {alertas.length === 0 ? (
+        {total === 0 ? (
           <Card style={{ padding:'40px', textAlign:'center' }}>
             <div style={{ fontSize:40, marginBottom:12 }}>✅</div>
             <div style={{ fontWeight:700, color:C.text, fontSize:16 }}>Tudo em dia!</div>
-            <div style={{ color:C.textLight, fontSize:13, marginTop:4 }}>Nenhum lead sem contato há mais de {DIAS_ALERTA} dias</div>
+            <div style={{ color:C.textLight, fontSize:13, marginTop:4 }}>Nenhum alerta pendente</div>
           </Card>
-        ) : alertas.map(lead => {
-          const dias = diasSemContato(lead.dataContato);
-          const urgente = dias >= 10;
-          const s = STATUS_CONFIG[lead.status];
-          return (
-            <div key={lead.id} onClick={()=>{setLeadSel(lead);setTela('detalhe');}} style={{
-              background:C.white, borderRadius:12, padding:'14px 16px', marginBottom:10,
-              border:`1.5px solid ${urgente?'#FFBABA':C.border}`, cursor:'pointer',
-              display:'flex', alignItems:'center', gap:12,
-            }}>
-              <div style={{ width:40, height:40, borderRadius:10, background:urgente?'#FFF0F0':'#FFF8E6', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>
-                {urgente?'🔴':'🟡'}
-              </div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ fontWeight:700, fontSize:14, color:C.text }}>{lead.nome}</span>
-                  <Stars value={lead.potencial||0} />
+        ) : (
+          <>
+            {/* Parados 5+ dias */}
+            {parados.length > 0 && (
+              <div style={{ marginBottom:24 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                  <SectionTitle style={{ marginBottom:0 }}>🔴 Tiveram contato mas pararam ({parados.length})</SectionTitle>
+                  <button onClick={() => marcarTodosContatados(parados)} style={{ background:'#FFF0F0', color:'#8B1A1A', border:'1px solid #FFBABA', borderRadius:8, padding:'5px 12px', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                    ✓ Marcar todos como contatado
+                  </button>
                 </div>
-                <div style={{ fontSize:12, color:C.textLight }}>via {lead.indicadoPor||'--'} · {lead.segmento||'--'}</div>
-                <div style={{ fontSize:12, fontWeight:700, color:urgente?'#8B1A1A':'#7C6200', marginTop:3 }}>
-                  ⏰ {dias === 999 ? 'Nunca contactado' : `${dias} dias sem contato`}
-                </div>
+                {parados.map(lead => <LeadAlerta key={lead.id} lead={lead} urgente={true} />)}
               </div>
-              <Badge status={lead.status} />
-            </div>
-          );
-        })}
+            )}
+
+            {/* Nunca contactados */}
+            {nuncaContatados.length > 0 && (
+              <div>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                  <SectionTitle style={{ marginBottom:0 }}>🟡 Nunca contactados ({nuncaContatados.length})</SectionTitle>
+                  <button onClick={() => marcarTodosContatados(nuncaContatados)} style={{ background:'#FFF8E6', color:'#7C4A00', border:'1px solid #F0D980', borderRadius:8, padding:'5px 12px', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                    ✓ Marcar todos como contatado
+                  </button>
+                </div>
+                {nuncaContatados.map(lead => <LeadAlerta key={lead.id} lead={lead} urgente={false} />)}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -487,7 +551,7 @@ function Metas({ leads }) {
 }
 
 // ── LEADS LIST ─────────────────────────────────────────────────────────────
-function LeadsList({ leads, setTela, setLeadSel }) {
+function LeadsList({ leads, setTela, setLeadSel, isPad=true }) {
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState('todos');
   const [ordenar, setOrdenar] = useState('nome');
@@ -507,7 +571,7 @@ function LeadsList({ leads, setTela, setLeadSel }) {
 
   return (
     <div style={{ flex:1, background:C.silverBg, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-      <div style={{ background:C.navyMid, padding:'28px 28px 20px', flexShrink:0 }}>
+      <div style={{ background:C.navyMid, padding: isPad ? '28px 28px 20px' : '48px 16px 16px', flexShrink:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
           <div style={{ width:7, height:7, borderRadius:'50%', background:C.gold }} />
           <span style={{ color:C.silverLight, fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:1 }}>Carteira</span>
@@ -540,40 +604,57 @@ function LeadsList({ leads, setTela, setLeadSel }) {
         ))}
       </div>
 
-      <div style={{ flex:1, overflowY:'auto', padding:'16px 24px' }}>
-        <Card style={{ overflow:'hidden' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'2fr 1.2fr 1.2fr 80px 1fr 80px', padding:'10px 16px', background:C.silverBg, borderBottom:`1px solid ${C.border}` }}>
-            {['Nome','Indicado por','Segmento','Potencial','Status','Ação'].map(h=>(
-              <div key={h} style={{ fontSize:10, fontWeight:800, color:C.textLight, textTransform:'uppercase', letterSpacing:0.5 }}>{h}</div>
-            ))}
-          </div>
-          {filtrados.map((lead,i) => {
-            const dias = diasSemContato(lead.dataContato);
-            const temAlerta = !['cliente','semInteresse'].includes(lead.status) && dias >= DIAS_ALERTA;
+      <div style={{ flex:1, overflowY:'auto', padding: isPad ? '16px 24px' : '12px 16px', paddingBottom: isPad ? 16 : 90 }}>
+        {isPad ? (
+          <Card style={{ overflow:'hidden' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'2fr 1.2fr 1.2fr 80px 1fr 80px', padding:'10px 16px', background:C.silverBg, borderBottom:`1px solid ${C.border}` }}>
+              {['Nome','Indicado por','Segmento','Potencial','Status','Ação'].map(h=>(
+                <div key={h} style={{ fontSize:10, fontWeight:800, color:C.textLight, textTransform:'uppercase', letterSpacing:0.5 }}>{h}</div>
+              ))}
+            </div>
+            {filtrados.map((lead,i) => {
+              const temAlerta = !['cliente','semInteresse'].includes(lead.status) && (!lead.dataContato || diasSemContato(lead.dataContato) >= DIAS_ALERTA);
+              return (
+                <div key={lead.id} onClick={()=>{setLeadSel(lead);setTela('detalhe');}} style={{
+                  display:'grid', gridTemplateColumns:'2fr 1.2fr 1.2fr 80px 1fr 80px',
+                  padding:'11px 16px', cursor:'pointer', alignItems:'center',
+                  background: temAlerta ? '#FFFBF0' : i%2===0?C.white:'#FAFBFC',
+                  borderBottom:`1px solid ${C.border}`,
+                  borderLeft: temAlerta ? '3px solid #F0C878' : '3px solid transparent',
+                }}>
+                  <div style={{ fontWeight:600, fontSize:13, color:C.text }}>{lead.nome}{temAlerta && <span style={{ marginLeft:6, fontSize:11 }}>⚠️</span>}</div>
+                  <div style={{ fontSize:12, color:C.textMid }}>{lead.indicadoPor||'--'}</div>
+                  <div style={{ fontSize:12, color:C.textMid }}>{lead.segmento||'--'}</div>
+                  <div><Stars value={lead.potencial||0} /></div>
+                  <div><Badge status={lead.status} /></div>
+                  <div style={{ display:'flex', gap:8 }}>
+                    {lead.telefone && <a href={`tel:${lead.telefone}`} onClick={e=>e.stopPropagation()} style={{ fontSize:16, textDecoration:'none' }}>📞</a>}
+                    {lead.telefone && <a href={`https://wa.me/55${lead.telefone}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{ fontSize:16, textDecoration:'none' }}>💬</a>}
+                  </div>
+                </div>
+              );
+            })}
+          </Card>
+        ) : (
+          filtrados.map(lead => {
+            const s = STATUS_CONFIG[lead.status];
+            const temAlerta = !['cliente','semInteresse'].includes(lead.status) && (!lead.dataContato || diasSemContato(lead.dataContato) >= DIAS_ALERTA);
             return (
               <div key={lead.id} onClick={()=>{setLeadSel(lead);setTela('detalhe');}} style={{
-                display:'grid', gridTemplateColumns:'2fr 1.2fr 1.2fr 80px 1fr 80px',
-                padding:'11px 16px', cursor:'pointer', alignItems:'center',
-                background: temAlerta ? '#FFFBF0' : i%2===0?C.white:'#FAFBFC',
-                borderBottom:`1px solid ${C.border}`,
-                borderLeft: temAlerta ? '3px solid #F0C878' : '3px solid transparent',
+                background:C.white, borderRadius:12, padding:'12px 14px', marginBottom:8,
+                border:`1px solid ${temAlerta?'#F0C878':C.border}`, cursor:'pointer',
+                display:'flex', alignItems:'center', gap:10, boxShadow:'0 1px 3px rgba(0,0,0,0.04)'
               }}>
-                <div style={{ fontWeight:600, fontSize:13, color:C.text }}>
-                  {lead.nome}
-                  {temAlerta && <span style={{ marginLeft:6, fontSize:11 }}>⚠️</span>}
+                <div style={{ width:36, height:36, borderRadius:10, background:s?.bg||C.silverBg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>{s?.emoji}</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:700, fontSize:14, color:C.text }}>{lead.nome}{temAlerta&&<span style={{ marginLeft:5, fontSize:11 }}>⚠️</span>}</div>
+                  <div style={{ fontSize:11, color:C.textLight, marginTop:1 }}>via {lead.indicadoPor||'--'}{lead.segmento?` · ${lead.segmento}`:''}</div>
                 </div>
-                <div style={{ fontSize:12, color:C.textMid }}>{lead.indicadoPor||'--'}</div>
-                <div style={{ fontSize:12, color:C.textMid }}>{lead.segmento||'--'}</div>
-                <div><Stars value={lead.potencial||0} /></div>
-                <div><Badge status={lead.status} /></div>
-                <div style={{ display:'flex', gap:8 }}>
-                  <span style={{ fontSize:16 }}>📞</span>
-                  <span style={{ fontSize:16 }}>💬</span>
-                </div>
+                <Badge status={lead.status} />
               </div>
             );
-          })}
-        </Card>
+          })
+        )}
       </div>
     </div>
   );
@@ -938,33 +1019,113 @@ function Backup({ leads, setLeads }) {
   );
 }
 
+// ── BOTTOM NAV (iPhone) ───────────────────────────────────────────────────
+function BottomNav({ tela, setTela, leads }) {
+  const alertas = leads.filter(l => !['cliente','semInteresse','semContato'].includes(l.status) && (!l.dataContato || diasSemContato(l.dataContato) >= DIAS_ALERTA)).length;
+  const items = [
+    { id:'hoje',   icon:'🏠', label:'Hoje' },
+    { id:'leads',  icon:'👥', label:'Leads' },
+    { id:'alertas',icon:'🔔', label:'Alertas', badge: alertas },
+    { id:'metas',  icon:'🎯', label:'Metas' },
+    { id:'mais',   icon:'⋯',  label:'Mais' },
+  ];
+  return (
+    <div style={{ position:'fixed', bottom:0, left:0, right:0, background:C.white, borderTop:`1px solid ${C.border}`, display:'flex', zIndex:100, paddingBottom:'env(safe-area-inset-bottom)', boxShadow:'0 -2px 12px rgba(0,0,0,0.08)' }}>
+      {items.map(item => {
+        const ativo = tela === item.id || (item.id==='mais' && ['recomendantes','backup','novo'].includes(tela));
+        return (
+          <button key={item.id} onClick={() => setTela(item.id==='mais' ? 'mais' : item.id)} style={{
+            flex:1, padding:'10px 0 12px', background:'none', border:'none', cursor:'pointer',
+            display:'flex', flexDirection:'column', alignItems:'center', gap:3, position:'relative'
+          }}>
+            <span style={{ fontSize:20 }}>{item.icon}</span>
+            <span style={{ fontSize:10, fontWeight:ativo?800:500, color:ativo?C.navyMid:C.silver }}>{item.label}</span>
+            {item.badge > 0 && (
+              <span style={{ position:'absolute', top:6, right:'50%', transform:'translateX(8px)', background:'#EF4444', color:C.white, fontSize:9, fontWeight:800, padding:'1px 5px', borderRadius:99, minWidth:16, textAlign:'center' }}>{item.badge > 99 ? '99+' : item.badge}</span>
+            )}
+            {ativo && <div style={{ width:4, height:4, borderRadius:'50%', background:C.navyMid }} />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── MAIS (iPhone overflow menu) ───────────────────────────────────────────
+function Mais({ setTela }) {
+  const items = [
+    { id:'recomendantes', icon:'🏆', label:'Ranking de Recomendantes', desc:'Veja quem mais indica' },
+    { id:'novo',          icon:'➕', label:'Novo Lead',                desc:'Cadastrar novo contato' },
+    { id:'backup',        icon:'💾', label:'Backup & Exportação',      desc:'Exportar e proteger seus dados' },
+  ];
+  return (
+    <div style={{ flex:1, background:C.silverBg, overflow:'auto', paddingBottom:80 }}>
+      <div style={{ background:C.navyMid, padding:'48px 20px 20px' }}>
+        <div style={{ color:C.white, fontSize:22, fontWeight:800 }}>Menu</div>
+      </div>
+      <div style={{ padding:'16px' }}>
+        {items.map(item => (
+          <button key={item.id} onClick={() => setTela(item.id)} style={{
+            width:'100%', background:C.white, borderRadius:14, padding:'16px', marginBottom:10,
+            border:`1px solid ${C.border}`, cursor:'pointer', display:'flex', alignItems:'center', gap:14,
+            textAlign:'left', fontFamily:'inherit', boxShadow:'0 1px 3px rgba(0,0,0,0.05)'
+          }}>
+            <div style={{ width:44, height:44, background:C.silverBg, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>{item.icon}</div>
+            <div>
+              <div style={{ fontWeight:700, fontSize:14, color:C.text }}>{item.label}</div>
+              <div style={{ fontSize:12, color:C.textLight, marginTop:2 }}>{item.desc}</div>
+            </div>
+            <span style={{ marginLeft:'auto', color:C.textLight, fontSize:18 }}>›</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── ROOT ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [tela, setTela] = useState('hoje');
   const [leadSel, setLeadSel] = useState(null);
-  const [leads, setLeads] = useState(() => { try { const s = localStorage.getItem("sitplan_v3"); return s ? JSON.parse(s) : LEADS_INICIAIS; } catch { return LEADS_INICIAIS; } });
-  // Auto-save to localStorage
-  useEffect(() => {
-    try { localStorage.setItem("sitplan_v3", JSON.stringify(leads)); } catch {}
-  }, [leads]);
+  const [leads, setLeads] = useState(LEADS_INICIAIS);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useState(() => {
+    const handler = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  });
+
+  const isPad = windowWidth >= 768;
 
   function addLead(form) {
     setLeads(p=>[{...form,id:Date.now(),status:'novo',proximoPasso:'',historico:[],dataContato:new Date().toISOString().split('T')[0]},...p]);
   }
 
+  const screens = {
+    hoje:          <Hoje leads={leads} setTela={setTela} setLeadSel={setLeadSel} isPad={isPad} />,
+    leads:         <LeadsList leads={leads} setTela={setTela} setLeadSel={setLeadSel} isPad={isPad} />,
+    alertas:       <Alertas leads={leads} setTela={setTela} setLeadSel={setLeadSel} setLeads={setLeads} />,
+    recomendantes: <Recomendantes leads={leads} setTela={setTela} setLeadSel={setLeadSel} />,
+    metas:         <Metas leads={leads} />,
+    backup:        <Backup leads={leads} setLeads={setLeads} />,
+    novo:          <NovoLead setTela={setTela} onSave={addLead} isPad={isPad} />,
+    mais:          <Mais setTela={setTela} />,
+    detalhe:       leadSel ? <Detalhe lead={leadSel} setTela={setTela} leads={leads} setLeads={setLeads} isPad={isPad} /> : null,
+  };
+
   return (
     <div style={{ height:'100vh', display:'flex', fontFamily:"'DM Sans', sans-serif", overflow:'hidden', background:C.navy }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-      <Sidebar tela={tela} setTela={setTela} leads={leads} />
+
+      {/* iPad: sidebar layout */}
+      {isPad && <Sidebar tela={tela} setTela={setTela} leads={leads} />}
+
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        {tela==='hoje'          && <Hoje leads={leads} setTela={setTela} setLeadSel={setLeadSel} />}
-        {tela==='leads'         && <LeadsList leads={leads} setTela={setTela} setLeadSel={setLeadSel} />}
-        {tela==='alertas'       && <Alertas leads={leads} setTela={setTela} setLeadSel={setLeadSel} />}
-        {tela==='recomendantes' && <Recomendantes leads={leads} setTela={setTela} setLeadSel={setLeadSel} />}
-        {tela==='metas'         && <Metas leads={leads} />}
-        {tela==='backup'        && <Backup leads={leads} setLeads={setLeads} />}
-        {tela==='novo'          && <NovoLead setTela={setTela} onSave={addLead} />}
-        {tela==='detalhe' && leadSel && <Detalhe lead={leadSel} setTela={setTela} leads={leads} setLeads={setLeads} />}
+        {screens[tela]}
+
+        {/* iPhone: bottom nav */}
+        {!isPad && <BottomNav tela={tela} setTela={setTela} leads={leads} />}
       </div>
     </div>
   );
