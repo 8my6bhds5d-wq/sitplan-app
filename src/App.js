@@ -1084,12 +1084,17 @@ function Mais({ setTela }) {
 }
 
 // ── ROOT ──────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'sitplan_leads_v3';
+const STORAGE_EDITS_KEY = 'sitplan_edits_v3';
+
 export default function App() {
   const [tela, setTela] = useState('hoje');
   const [leadSel, setLeadSel] = useState(null);
-  const [leads, setLeads] = useState(LEADS_INICIAIS);
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
+  // Responsive handler
   useState(() => {
     const handler = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handler);
@@ -1098,33 +1103,109 @@ export default function App() {
 
   const isPad = windowWidth >= 768;
 
-  function addLead(form) {
-    setLeads(p=>[{...form,id:Date.now(),status:'novo',proximoPasso:'',historico:[],dataContato:new Date().toISOString().split('T')[0]},...p]);
+  // Load leads: try localStorage edits first, then fetch leads.json
+  useState(() => {
+    async function loadLeads() {
+      try {
+        // Load base leads from public/leads.json
+        const res = await fetch('/leads.json');
+        const baseLeads = await res.json();
+
+        // Apply any saved edits (status changes, histórico, etc) from localStorage
+        const savedEdits = localStorage.getItem(STORAGE_EDITS_KEY);
+        if (savedEdits) {
+          const edits = JSON.parse(savedEdits); // { [id]: { status, historico, ... } }
+          const merged = baseLeads.map(l => {
+            const edit = edits[l.id];
+            return edit ? { ...l, ...edit } : l;
+          });
+          // Add any new leads created in the app
+          const newLeads = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(l => l.id > 999999);
+          setLeads([...newLeads, ...merged]);
+        } else {
+          setLeads(baseLeads);
+        }
+      } catch {
+        // Fallback to full localStorage if fetch fails
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) setLeads(JSON.parse(saved));
+          else setLeads(LEADS_INICIAIS);
+        } catch { setLeads(LEADS_INICIAIS); }
+      }
+      setLoading(false);
+    }
+    loadLeads();
+  });
+
+  // Save edits to localStorage (only changes, not full list)
+  function saveEdits(updatedLeads) {
+    try {
+      const edits = {};
+      updatedLeads.forEach(l => {
+        if (l.status !== 'novo' || l.historico?.length || l.potencial || l.proximoPasso || l.dataContato) {
+          edits[l.id] = {
+            status: l.status, historico: l.historico, potencial: l.potencial,
+            proximoPasso: l.proximoPasso, dataContato: l.dataContato,
+            temSeguro: l.temSeguro, seguradora: l.seguradora
+          };
+        }
+      });
+      localStorage.setItem(STORAGE_EDITS_KEY, JSON.stringify(edits));
+      // Save new leads separately
+      const newLeads = updatedLeads.filter(l => l.id > 999999);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newLeads));
+    } catch {}
   }
+
+  function setLeadsAndSave(updater) {
+    setLeads(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      saveEdits(next);
+      return next;
+    });
+  }
+
+  function addLead(form) {
+    setLeadsAndSave(p => [{
+      ...form, id: Date.now(), status:'novo', proximoPasso:'',
+      historico:[], dataContato: new Date().toISOString().split('T')[0],
+      potencial:0, temSeguro:'Não sei', seguradora:''
+    }, ...p]);
+  }
+
+  // Loading screen
+  if (loading) return (
+    <div style={{ height:'100vh', background:C.navy, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:"'DM Sans', sans-serif" }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800&display=swap" rel="stylesheet" />
+      <div style={{ width:60, height:60, background:C.gold, borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, marginBottom:20 }}>🛡️</div>
+      <div style={{ color:C.white, fontSize:22, fontWeight:800, marginBottom:8 }}>SITPLAN</div>
+      <div style={{ color:C.silver, fontSize:14, marginBottom:32 }}>Carregando sua carteira...</div>
+      <div style={{ width:200, height:4, background:'rgba(255,255,255,0.1)', borderRadius:99, overflow:'hidden' }}>
+        <div style={{ height:'100%', background:C.gold, borderRadius:99, animation:'load 1.5s ease-in-out infinite', width:'60%' }} />
+      </div>
+      <style>{`@keyframes load { 0%{transform:translateX(-100%)} 100%{transform:translateX(300%)} }`}</style>
+    </div>
+  );
 
   const screens = {
     hoje:          <Hoje leads={leads} setTela={setTela} setLeadSel={setLeadSel} isPad={isPad} />,
     leads:         <LeadsList leads={leads} setTela={setTela} setLeadSel={setLeadSel} isPad={isPad} />,
-    alertas:       <Alertas leads={leads} setTela={setTela} setLeadSel={setLeadSel} setLeads={setLeads} />,
+    alertas:       <Alertas leads={leads} setTela={setTela} setLeadSel={setLeadSel} setLeads={setLeadsAndSave} />,
     recomendantes: <Recomendantes leads={leads} setTela={setTela} setLeadSel={setLeadSel} />,
     metas:         <Metas leads={leads} />,
-    backup:        <Backup leads={leads} setLeads={setLeads} />,
+    backup:        <Backup leads={leads} setLeads={setLeadsAndSave} />,
     novo:          <NovoLead setTela={setTela} onSave={addLead} isPad={isPad} />,
     mais:          <Mais setTela={setTela} />,
-    detalhe:       leadSel ? <Detalhe lead={leadSel} setTela={setTela} leads={leads} setLeads={setLeads} isPad={isPad} /> : null,
+    detalhe:       leadSel ? <Detalhe lead={leadSel} setTela={setTela} leads={leads} setLeads={setLeadsAndSave} isPad={isPad} /> : null,
   };
 
   return (
     <div style={{ height:'100vh', display:'flex', fontFamily:"'DM Sans', sans-serif", overflow:'hidden', background:C.navy }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-
-      {/* iPad: sidebar layout */}
       {isPad && <Sidebar tela={tela} setTela={setTela} leads={leads} />}
-
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
         {screens[tela]}
-
-        {/* iPhone: bottom nav */}
         {!isPad && <BottomNav tela={tela} setTela={setTela} leads={leads} />}
       </div>
     </div>
